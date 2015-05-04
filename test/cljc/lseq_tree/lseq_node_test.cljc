@@ -27,7 +27,7 @@
   (testing "create a tree of 2 elements (1 subpath)"
     (let [node1 (node [(triple 1 2 3)] "a")
           node2 (node [(triple 4 5 6)
-                       (triple 7 8 9) "b"])
+                       (triple 7 8 9)] "b")
           node3 (add node1 node2)]
       (is (= (:sub-counter node3) 1))))
 
