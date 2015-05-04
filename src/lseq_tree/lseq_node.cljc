@@ -29,8 +29,9 @@
         ; if the path does not exist
         (assoc next-this
                :children
-               (into []
-                     (sorted :triple (cons other n-children))))
+               (->> (cons other n-children)
+                    (sorted :triple)
+                    (into [])))
         ; if the path does exist
         (if (= (count o-children) 0)
           ; if the other node does not have children
