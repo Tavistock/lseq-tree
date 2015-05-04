@@ -9,10 +9,10 @@
           t2 (triple 0 1 1)
           t3 (triple 0 0 1)
           t4 (triple)]
-      (are [x y result] (= (direction x y) result)
-           t1 t2 1
-           t2 t1 -1
-           t2 t3 1
-           t3 t2 -1
-           t3 t4 1
-           t4 t3 -1))))
+      (are [x y result] (= (sorted [x y]) result)
+           t1 t2 (list t2 t1)
+           t2 t1 (list t2 t1)
+           t2 t3 (list t3 t2)
+           t3 t2 (list t3 t2)
+           t3 t4 (list t4 t3)
+           t4 t3 (list t4 t3)))))
