@@ -9,6 +9,8 @@
 
   :plugins  [[lein-cljsbuild  "1.0.5"]]
 
+  :main lseq-tree.core
+
   :source-paths ["src"]
   :test-paths ["test/cljc"]
   :cljsbuild {:test-commands
