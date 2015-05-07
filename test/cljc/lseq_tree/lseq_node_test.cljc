@@ -66,3 +66,82 @@
       (is (= (index-of node4 node2) 2))
       (is (= (index-of node4 node3) 1)))))
 
+(deftest test-fetch
+  (testing "fetch value at index for simple tree"
+    (let [node1 (node [] "a")
+          node2 (node [(triple 1 1 1)] "b")
+          node3 (node [(triple 2 2 2)] "c")
+          root (reduce add [node1 node2 node3])]
+      (is (= (:sub-counter root) 2))
+      (is (= (fetch root 1) node2))
+      (is (= (fecth root 2) node3))))
+  (testing "fetch value at index of depth 2 tree"
+    (let [node1 (node [] "a")
+          node2 (node [(triple 1 1 1)] "b")
+          node3 (node [(triple 2 2 2)
+                       (triple 3 3 3)] "d")
+          node4 (node [(triple 2 2 2)] "c")
+          root (reduce add node1 node2 node3 node4)]
+      (is (= (fetch root 1) node2))
+      (is (= (fetch root 2) node4))
+      (is (= (fetch root 3) node3)))))
+
+(deftest test-del
+  (testing "should delete a node of a siple tree"
+    (let [node1 (node [] "a")
+          node2 (node [(triple 1 1 1)] "b")
+          node3 (node [(triple 2 2 2)] "c")
+          root (reduce add [node1 node2 node3])
+          del-root (del root node2)]
+      (is (= (index-of root node3) 2))
+      (is (= (index-of del-root node3) 1))))
+  (testing "should delete all intermediate nodes on a path"
+    (let [node1 (node [] "a")
+          node2 (node [(triple 1 1 1)
+                       (triple 2 2 2)
+                       (triple 3 3 3)] "b")
+          node3 (node [(triple 1 1 1)] "c")
+          root (reduce add [node1 node2 node3])
+          del-root (del root node node2)
+          del-fchild (first (:children del-root))]
+      (is (= (index-of root node3) 1))
+      (is (= (index-of root node2) 2))
+      (is (= (index-of del-root node2) 1))
+      (is (= (:element del-fchild) "c"))
+      (is (= (count (:children del-fchild)) 0))))
+  (testing "should not delete intermediate nodes in complex tree"
+    (let [node1 (node [] "a")
+          node2 (node [(triple 1 1 1)
+                       (triple 2 2 2)
+                       (triple 3 3 3)] "b")
+          node3 (node [(triple 1 1 1)] "c")
+          node4 (node [(triple 1 1 1)
+                       (triple 2 2 2)
+                       (triple 4 4 4)
+                       (triple 5 5 5)] "d")
+          root (reduce add [node1 node2 node3 node4])
+          root2 (del root node2)
+          root3 (del root2 node3)]
+      (is (= (index-of root node3) 1))
+      (is (= (index-of root node2) 2))
+      (is (= (index-of root node4) 3))
+      (is (= (index-of root2 node3) 1))
+      (is (= (index-of root2 node4) 2))
+      (is (= (index-of root3 node4) 1)))))
+
+(def test-indexes
+  (testing "gets a vector of the path in the tree for a node"
+    (let [node1 (node [] nil)
+          node2 (node [(triple 1 1 1)] "a")
+          node3 (node [(triple 2 2 2)
+                       (triple 3 3 3)] "b")
+          node4 (node [(triple 2 2 2)
+                       (triple 4 4 4)] "c")
+          root (reduce add [node1 node2 node3 node4])]
+      (is (= (:sub-counter root) 3))
+      (is (= (index-of root node2) 0))
+      (is (= (index-of root node3) 1))
+      (is (= (index-of root node4) 2))
+      (is (= (indexes root node2) [0]))
+      (is (= (indexes root node3) [1 0]))
+      (is (= (indexes root node4) [1 1])))))
