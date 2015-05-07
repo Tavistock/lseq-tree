@@ -74,14 +74,14 @@
           root (reduce add [node1 node2 node3])]
       (is (= (:sub-counter root) 2))
       (is (= (fetch root 1) node2))
-      (is (= (fecth root 2) node3))))
+      (is (= (fetch root 2) node3))))
   (testing "fetch value at index of depth 2 tree"
     (let [node1 (node [] "a")
           node2 (node [(triple 1 1 1)] "b")
           node3 (node [(triple 2 2 2)
                        (triple 3 3 3)] "d")
           node4 (node [(triple 2 2 2)] "c")
-          root (reduce add node1 node2 node3 node4)]
+          root (reduce add [node1 node2 node3 node4])]
       (is (= (fetch root 1) node2))
       (is (= (fetch root 2) node4))
       (is (= (fetch root 3) node3)))))
@@ -102,7 +102,7 @@
                        (triple 3 3 3)] "b")
           node3 (node [(triple 1 1 1)] "c")
           root (reduce add [node1 node2 node3])
-          del-root (del root node node2)
+          del-root (del root node2)
           del-fchild (first (:children del-root))]
       (is (= (index-of root node3) 1))
       (is (= (index-of root node2) 2))
