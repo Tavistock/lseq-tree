@@ -5,6 +5,26 @@
 (defn find-in [xs n]
   (.indexOf xs n))
 
+(defn node-zip
+  [root]
+  (z/zipper
+    (fn [_] true)
+    (fn [n] (:children n))
+    (fn [n c] nil) ;do not use any editing on the tree
+    root))
+
+(defn crawl-to
+  "returns a zipper at the nth element"
+  [node index]
+    (loop [zip (node-zip node)
+           to-go index]
+      (let [elem (:element (z/node zip))]
+        (if (and (= to-go 0) elem)
+          zip
+          (if (and (z/end? zip) (>= to-go 0))
+            nil
+            (recur (z/next zip) (if elem (dec to-go) to-go)))))))
+
 (defprotocol INode
   (add [this node])
   (del [this node])
@@ -103,7 +123,18 @@
                    (get-in tree [:children index])
                    (get-in path [:children 0])))))))
 
-  (fetch [this index] nil))
+  (fetch [this index]
+    "this function goes to a node in a zipper then crawls up making
+    a replica of the nodes it sees"
+    (loop [zip (crawl-to this index)
+           build nil]
+      (let [{:keys [triple element]} (z/node zip)
+            child (if build
+                    (->Node triple nil 1 [build])
+                    (->Node triple element 0 []))]
+        (if (z/path zip)
+          (recur (z/up zip) child)
+          build)))))
 
 (defn node
   [[triple & xs] element]
