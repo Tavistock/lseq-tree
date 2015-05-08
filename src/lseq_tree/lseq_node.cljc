@@ -31,30 +31,35 @@
 
 (declare add del fetch index-of indexes)
 
+(defn merge-child
+  [children target]
+  (->> (cons target children)
+       (sorted :triple)
+       (into [])))
+
+(defn triple-in
+  [{:keys [children] :as node}
+   triple]
+  (find-in (map :triple children) triple))
+
 (defn add
-  [{:keys [children triple] :as this}
+  [{:keys [children triple] :as node}
    {-children :children -element :element -triple :triple
     :as target}]
-  (let [this* (update-in this [:sub-counter] inc)
-        index (find-in (map :triple children) -triple)
+  (let [node* (update-in node [:sub-counter] inc)
+        index (triple-in node* -triple)
         length (count children)]
     ;does the path exist
     (if (or (< index 0)
-            (= length 0)
-            (and (= index 0) (> length 0)
-                 (not= (:triple (first children)) -triple)))
-      (assoc this* :children (->> (cons target children)
-                                  (sorted :triple)
-                                  (into [])))
+            (= length 0))
+      (assoc node* :children (merge-child children target))
       ;does the target have children
       (if (= (count -children) 0)
         ; is their something at the index
         (if (get-in children [index :element])
-          this
-          (assoc-in this* [:children index :element] -element))
-        (update-in this*
-                   [:children index]
-                   #(add % (first -children)))))))
+          node
+          (assoc-in node* [:children index :element] -element))
+        (update-in node* [:children index] #(add % (first -children)))))))
 
 (defn del
   [this node]
