@@ -44,17 +44,17 @@
       (is (= (count (:children fchild)) 2))))
 
   (testing "construct a tree, verify index locations"
-    (let [node1 (node [] "a")
-          node2 (node [(triple 1 1 1)] "b")
-          node3 (node [(triple 2 2 2)
+    (let [a (node [] "a")
+          b (node [(triple 1 1 1)] "b")
+          c (node [(triple 2 2 2)
                        (triple 3 3 3)] "c")
-          node4 (node [(triple 2 2 2)
+          d (node [(triple 2 2 2)
                        (triple 4 4 4)] "d")
-          node5 (reduce add [node1 node2 node3 node4])]
-      (is (= (:sub-counter node5) 3))
-      (is (= (index-of node5 node2) 1))
-      (is (= (index-of node5 node3) 2))
-      (is (= (index-of node5 node4) 3))))
+          root (reduce add [a b c d])]
+      (is (= (:sub-counter root) 3))
+      (is (= (index-of root b) 1))
+      (is (= (index-of root c) 2))
+      (is (= (index-of root d) 3))))
 
   (testing "construct a tree, insert element into existing branch"
     (let [node1 (node [] "a")
@@ -64,7 +64,19 @@
           node4 (reduce add [node1 node2 node3])]
       (is (= (:sub-counter node4) 2))
       (is (= (index-of node4 node2) 2))
-      (is (= (index-of node4 node3) 1)))))
+      (is (= (index-of node4 node3) 1))))
+  (testing "longer tree"
+    (let [start (node [] nil)
+          a (node [(triple 1 1 1)] "a")
+          b (node [(triple 2 2 2)] "b")
+          g (node [(triple 3 3 3)] "g")
+          c (node [(triple 2 2 2)(triple 1 1 1)] "c")
+          d (node [(triple 2 2 2)(triple 2 2 2)] "d")
+          e (node [(triple 2 2 2)(triple 3 3 3)] "e")
+          f (node [(triple 2 2 2)(triple 4 4 4)] "f")
+          root (reduce add [start a b c d e f g])]
+      (are [x y] (= (index-of root x) y)
+           a 0 b 1 c 2 d 3 e 4 f 5 g 6))))
 
 (deftest test-fetch
   (testing "fetch value at index for simple tree"
@@ -86,7 +98,7 @@
       (is (= (fetch root 2) node4))
       (is (= (fetch root 3) node3)))))
 
-(deftest test-del
+#_(deftest test-del
   (testing "should delete a node of a siple tree"
     (let [node1 (node [] "a")
           node2 (node [(triple 1 1 1)] "b")
