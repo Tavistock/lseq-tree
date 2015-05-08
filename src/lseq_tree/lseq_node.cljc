@@ -15,18 +15,6 @@
     (fn [n c] nil) ;do not use any editing on the tree
     root))
 
-(defn crawl-to
-  "returns a zipper at the nth element"
-  [node index]
-  (loop [zip (node-zip node)
-         to-go index]
-    (let [elem (:element (z/node zip))]
-      (if (and (= to-go 0) elem)
-        zip
-        (if (and (z/end? zip) (>= to-go 0))
-          nil
-          (recur (z/next zip) (if elem (dec to-go) to-go)))))))
-
 (defrecord Node [triple element sub-counter children])
 
 (declare add del fetch index-of indexes)
@@ -126,6 +114,18 @@
           (recur (conj xs index)
                  (get-in tree [:children index])
                  (get-in path [:children 0])))))))
+
+(defn crawl-to
+  "returns a zipper at the nth element"
+  [node index]
+  (loop [zip (node-zip node)
+         to-go index]
+    (let [elem (:element (z/node zip))]
+      (if (and (= to-go 0) elem)
+        zip
+        (if (and (z/end? zip) (>= to-go 0))
+          nil
+          (recur (z/next zip) (if elem (dec to-go) to-go)))))))
 
 (defn fetch
   "this function goes to a node in a zipper then crawls up making
