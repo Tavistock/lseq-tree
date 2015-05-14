@@ -1,6 +1,5 @@
 (ns lseq-tree.core
-  (:require [lseq-tree.util :as util]
-            [lseq-tree.lseq-node :as n :refer [node add]]
+  (:require [lseq-tree.lseq-node :as n :refer [node add]]
             [lseq-tree.triple :as t :refer [triple]]
             [clojure.zip :as z]))
 

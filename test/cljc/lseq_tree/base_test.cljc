@@ -5,13 +5,13 @@
 
 (deftest setup
   (testing "trivial setup"
-    (is (= (:base (base 43)) 43))))
+    (is (= (:size (base 43)) 43))))
 
 (deftest singleton
   (testing "base is not a singleton"
     (let [base1 (base 42)
           base2 (base)]
-      (is (= (:base base1) 42)))))
+      (is (= (:size base1) 42)))))
 
 (deftest bit-base
   (testing "get the bit for a base at a certain level"
