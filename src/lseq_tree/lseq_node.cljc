@@ -37,6 +37,7 @@
 
 (defn add
   "adds a node with one child at each level(a limb) to the children of a node"
+  ; TODO use a indexes func on a limb instead of this
   [{:keys [children triple] :as node}
    {-children :children -element :element -triple :triple
     :as limb}]
@@ -75,7 +76,9 @@
 (defn index-of
   "returns the zero-based index of a limb in a node"
   [node limb]
-  (if-let [paths (indexes node limb)]
+  (let [paths (indexes node limb)]
+    (if (some nil? paths)
+      nil
       (loop [paths paths,
              node node,
              acc (if (:element node) 1 0)]
@@ -85,12 +88,12 @@
             (recur tail
                    (nth children head)
                    (+ acc (left-to-right head node)))
-            (dec acc)))) ;zero-based index
-      nil))
+            (dec acc))))))) ;zero-based index
 
 (defn indexes
   "returns a vector of numbers for each level that the index of a limb is
-  located at in a node"
+  located at in a node. returns nil instead of a number when it can't find the
+  limb (eg [1 2 3 nil])"
   [node limb]
   (loop [path [], node node, limb limb]
     (let [{:keys [children]} node
@@ -98,7 +101,7 @@
       ;does the node contain the limb
       (if (or (< index 0)
               (and (= index 0) (= (count children) 0)))
-        nil
+        (conj path nil)
         ;does the limb have more children
         (if (or (= (count (:children limb)) 0)
                 (= (count children) 0))
