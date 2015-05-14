@@ -17,31 +17,37 @@
 
 (defrecord Node [triple element sub-counter children])
 
+(defn node
+  [[triple & xs] element]
+  (if (= (count xs) 0)
+    (Node. triple element 0 [])
+    (Node. triple nil 1 [(node xs element)])))
+
 (declare add del fetch index-of indexes)
 
 (defn merge-child
-  [children target]
-  (->> (cons target children)
-       (sorted :triple)
-       (into [])))
+  "takes children and merges a limb into it..."
+  [children limb]
+  (->> children (cons limb) (sorted :triple) (into [])))
 
 (defn triple-in
-  [{:keys [children] :as node}
-   triple]
+  "finds the triple in a node and returns it's index"
+  [{:keys [children] :as node} triple]
   (find-in (map :triple children) triple))
 
 (defn add
+  "adds a node with one child at each level(a limb) to the children of a node"
   [{:keys [children triple] :as node}
    {-children :children -element :element -triple :triple
-    :as target}]
+    :as limb}]
   (let [node* (update-in node [:sub-counter] inc)
         index (triple-in node* -triple)
         length (count children)]
     ;does the path exist
     (if (or (< index 0)
             (= length 0))
-      (assoc node* :children (merge-child children target))
-      ;does the target have children
+      (assoc node* :children (merge-child children limb))
+      ;does the limb have children
       (if (= (count -children) 0)
         ; is their something at the index
         (if (get-in children [index :element])
@@ -54,8 +60,10 @@
   this)
 
 (defn left-to-right
-  [position tree]
-  (loop [pos position, branch (-> tree node-zip z/down), acc 0]
+  "a strategy that returns the sum of the branches to the left of a position
+  in a node"
+  [position node]
+  (loop [pos position, branch (-> node node-zip z/down), acc 0]
     (let [{:keys [sub-counter element]} (z/node branch)
           acc* (if element (inc acc) acc)]
       (if (= pos 0)
@@ -64,59 +72,43 @@
                (z/right branch)
                (+ sub-counter acc*))))))
 
-(defn right-to-left
-  [position {:keys [children] :as tree}]
-  (loop [pos 0
-         branch (-> tree node-zip z/down z/rightmost)
-         acc 0]
-    (let [{:keys [sub-counter element]} (z/node branch)]
-      (if (= (+ pos (inc position)) (count children))
-        (- (:sub-counter tree) acc)
-        (recur (inc position)
-               (z/left branch)
-               (+ sub-counter (if element (inc acc) acc)))))))
-
-(defn strat
-  [position acc sub-count]
-  (if (< (- position acc) (/ sub-count 2))
-    left-to-right right-to-left))
-
 (defn index-of
-  [this node]
-  (if-let [full-path (indexes this node)]
-      (loop [path full-path,
-             tree this,
-             acc (if (:element tree) 1 0)]
-        (let [head (first path), tail (next path)
-              {:keys [sub-counter children]} tree]
+  "returns the zero-based index of a limb in a node"
+  [node limb]
+  (if-let [paths (indexes node limb)]
+      (loop [paths paths,
+             node node,
+             acc (if (:element node) 1 0)]
+        (let [head (first paths), tail (next paths)
+              {:keys [children]} node]
           (if head
             (recur tail
                    (nth children head)
-                   (+ acc
-                      ;((strat head acc sub-counter)head tree)
-                      (left-to-right head tree)))
-            (dec acc))))
+                   (+ acc (left-to-right head node)))
+            (dec acc)))) ;zero-based index
       nil))
 
 (defn indexes
-  [this node]
-  (loop [xs [], tree this, path node]
-    (let [{:keys [children]} tree
-          index (find-in (map :triple children) (:triple path))]
-      ;does the tree contain the path
+  "returns a vector of numbers for each level that the index of a limb is
+  located at in a node"
+  [node limb]
+  (loop [path [], node node, limb limb]
+    (let [{:keys [children]} node
+          index (find-in (map :triple children) (:triple limb))]
+      ;does the node contain the limb
       (if (or (< index 0)
               (and (= index 0) (= (count children) 0)))
         nil
-        ;does the path have more children
-        (if (or (= (count (:children path)) 0)
+        ;does the limb have more children
+        (if (or (= (count (:children limb)) 0)
                 (= (count children) 0))
-          (conj xs index)
-          (recur (conj xs index)
-                 (get-in tree [:children index])
-                 (get-in path [:children 0])))))))
+          (conj path index)
+          (recur (conj path index)
+                 (get-in node [:children index])
+                 (get-in limb [:children 0])))))))
 
 (defn crawl-to
-  "returns a zipper at the nth element"
+  "returns a zipper with it's location where the index in a node"
   [node index]
   (loop [zip (node-zip node)
          to-go index]
@@ -127,11 +119,11 @@
           nil
           (recur (z/next zip) (if elem (dec to-go) to-go)))))))
 
-(defn fetch
-  "this function goes to a node in a zipper then crawls up making
-  a replica of the nodes it sees"
-  [this index]
-  (loop [zip (crawl-to this index)
+(defn crawl-out
+  "this crawls up making from child node in a zipper making a replica of the
+  nodes it sees"
+  [child]
+  (loop [zip child
          build nil]
     (let [{:keys [triple element]} (z/node zip)
           child (if build
@@ -141,8 +133,10 @@
         (recur (z/up zip) child)
         build))))
 
-(defn node
-  [[triple & xs] element]
-  (if (= (count xs) 0)
-    (Node. triple element 0 [])
-    (Node. triple nil 1 [(node xs element)])))
+(defn fetch [node index]
+  "takes a node and an index and returns a recreation of the node at that index
+  as a limb"
+  (-> node
+      (crawl-to index)
+      (crawl-out)))
+
