@@ -5,17 +5,29 @@
 (defn find-in [xs n]
   (.indexOf xs n))
 
+(defrecord Node [triple element sub-counter children])
+
+(defn count-elements
+  [{:keys [sub-counter element]}]
+  (if element
+    (inc sub-counter)
+    sub-counter))
+
+(defn count-children
+  [children]
+  (reduce + (map count-elements children)))
+
 (defn node-zip
   [root]
   (z/zipper
-    (fn [_] true)
-    (fn [n] (if (vector? n)
-              (seq n)
-              (:children n)))
-    (fn [n c] nil) ;do not use any editing on the tree
+    (fn [node] (:children node))
+    (fn [node] (seq (:children node)))
+    (fn [{:keys [triple element]} children]
+      (->Node triple
+              element
+              (count-children children)
+              (sorted :triple children)))
     root))
-
-(defrecord Node [triple element sub-counter children])
 
 (defn node
   [[triple & xs] element]
@@ -35,26 +47,51 @@
   [{:keys [children] :as node} triple]
   (find-in (map :triple children) triple))
 
+(defn nth-child
+  "Returns the loc of the nth child of the node at this loc, or
+  nil if no children or nth-child"
+  [loc n]
+  (when (z/branch? loc)
+    (let [[node path] loc
+          cs (z/children loc)
+          c (nth cs n nil)]
+      (when (and cs c)
+        (with-meta [c
+                    {:l (if (> n 0) (vec (take n cs)) [])
+                     :pnodes (if path
+                               (conj (:pnodes path) node)
+                               [node])
+                     :ppath path
+                     :r (drop (+ n 1) cs)}]
+                   (meta loc))))))
+
 (defn add
   "adds a node with one child at each level(a limb) to the children of a node"
   ; TODO use a indexes func on a limb instead of this
-  [{:keys [children triple] :as node}
-   {-children :children -element :element -triple :triple
-    :as limb}]
-  (let [node* (update-in node [:sub-counter] inc)
-        index (triple-in node* -triple)
-        length (count children)]
-    ;does the path exist
-    (if (or (< index 0)
-            (= length 0))
-      (assoc node* :children (merge-child children limb))
-      ;does the limb have children
-      (if (= (count -children) 0)
-        ; is their something at the index
-        (if (get-in children [index :element])
-          node
-          (assoc-in node* [:children index :element] -element))
-        (update-in node* [:children index] #(add % (first -children)))))))
+  [node limb]
+  (let [paths (indexes node limb)]
+    (if (last paths)
+      (loop [[head & tail] paths,
+             node-loc (node-zip node),
+             limb limb]
+        (let [node-child (nth-child node-loc head)]
+          (if (empty? tail)
+            (if (-> node-child z/node :element)
+              node
+              (-> node-child
+                  (z/edit assoc :element (:element limb))
+                  z/root))
+            (recur tail
+                   node-child
+                   (first (:children limb))))))
+      (loop [[head & tail] paths
+             node-loc (node-zip node)
+             limb limb]
+        (if-not head
+          (-> node-loc (z/append-child limb) z/root)
+          (recur tail
+                 (nth-child node-loc head)
+                 (first (:children limb))))))))
 
 (defn del
   [this node]
@@ -79,16 +116,14 @@
   (let [paths (indexes node limb)]
     (if (some nil? paths)
       nil
-      (loop [paths paths,
-             node node,
+      (loop [[head & tail] paths,
+             {:keys [children] :as node} node,
              acc (if (:element node) 1 0)]
-        (let [head (first paths), tail (next paths)
-              {:keys [children]} node]
-          (if head
-            (recur tail
-                   (nth children head)
-                   (+ acc (left-to-right head node)))
-            (dec acc))))))) ;zero-based index
+        (if head
+          (recur tail
+                 (nth children head)
+                 (+ acc (left-to-right head node)))
+          (dec acc)))))) ;zero-based index
 
 (defn indexes
   "returns a vector of numbers for each level that the index of a limb is
@@ -107,8 +142,8 @@
                 (= (count children) 0))
           (conj path index)
           (recur (conj path index)
-                 (get-in node [:children index])
-                 (get-in limb [:children 0])))))))
+                 (nth children index)
+                 (first (:children limb))))))))
 
 (defn crawl-to
   "returns a zipper with it's location where the index in a node"
