@@ -58,32 +58,33 @@
               :r (drop (+ n 1) cs)}]
           (meta loc))))))
 
+(defn replace-node
+  [[head & tail] node-loc limb]
+  (let [node-child (nth-child node-loc head)]
+    (if (empty? tail)
+      (if (-> node-child z/node :element)
+        (-> node-loc z/root)
+        (-> node-child
+            (z/edit assoc :element (:element limb))
+            z/root))
+      (recur tail node-child (first (:children limb))))))
+
+(defn merge-node
+  [[head & tail] node-loc limb]
+  (if-not head
+    (-> node-loc (z/append-child limb) z/root)
+    (recur tail
+           (nth-child node-loc head)
+           (first (:children limb)))))
+
 (defn add
   "adds a node with one child at each level(a limb) to the children of a node"
   [node limb]
-  (let [paths (indexes node limb)]
+  (let [paths (indexes node limb)
+        node-loc (node-zip node)]
     (if (last paths)
-      (loop [[head & tail] paths,
-             node-loc (node-zip node),
-             limb limb]
-        (let [node-child (nth-child node-loc head)]
-          (if (empty? tail)
-            (if (-> node-child z/node :element)
-              node
-              (-> node-child
-                  (z/edit assoc :element (:element limb))
-                  z/root))
-            (recur tail
-                   node-child
-                   (first (:children limb))))))
-      (loop [[head & tail] paths
-             node-loc (node-zip node)
-             limb limb]
-        (if-not head
-          (-> node-loc (z/append-child limb) z/root)
-          (recur tail
-                 (nth-child node-loc head)
-                 (first (:children limb))))))))
+      (replace-node paths node-loc limb)
+      (merge-node paths node-loc limb))))
 
 (defn del
   [node limb]
