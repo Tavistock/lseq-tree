@@ -7,28 +7,7 @@
 
 (defrecord Node [triple element sub-counter children])
 
-(defn count-elements
-  [{:keys [sub-counter element]}]
-  (if element
-    (inc sub-counter)
-    sub-counter))
-
-(defn count-children
-  [children]
-  (reduce + (map count-elements children)))
-
-(defn filled-node
-  [{:keys [children element] :as node}]
-  (or element (not-empty children)))
-
-(defn make-node
-  [{:keys [triple element]} children]
-  (let [children (filter filled-node children)
-        sub-counter (count-children children)]
-    (->Node triple
-            element
-            sub-counter
-            (sorted :triple children))))
+(declare count-elements count-children filled-node make-node)
 
 (defn node-zip
   [root]
@@ -42,40 +21,7 @@
 
 (declare add del fetch index-of indexes)
 
-(defn nth-child
-  "Returns the loc of the nth child of the node at this loc, or
-  nil if no children or nth-child"
-  [loc n]
-  (when (z/branch? loc)
-    (let [[node path] loc
-          cs (z/children loc)
-          c (nth cs n nil)]
-      (when (and cs c)
-        (with-meta
-          [c {:l (if (> n 0) (vec (take n cs)) [])
-              :pnodes (if path (conj (:pnodes path) node) [node])
-              :ppath path
-              :r (drop (+ n 1) cs)}]
-          (meta loc))))))
-
-(defn replace-node
-  [[head & tail] node-loc limb]
-  (let [node-child (nth-child node-loc head)]
-    (if (empty? tail)
-      (if (-> node-child z/node :element)
-        (-> node-loc z/root)
-        (-> node-child
-            (z/edit assoc :element (:element limb))
-            z/root))
-      (recur tail node-child (first (:children limb))))))
-
-(defn merge-node
-  [[head & tail] node-loc limb]
-  (if-not head
-    (-> node-loc (z/append-child limb) z/root)
-    (recur tail
-           (nth-child node-loc head)
-           (first (:children limb)))))
+(declare nth-child replace-node merge-node)
 
 (defn add
   "adds a node with one child at each level(a limb) to the children of a node"
@@ -99,18 +45,7 @@
           (recur tail (nth-child node-loc head))))
       node)))
 
-(defn left-to-right
-  "a strategy that returns the sum of the branches to the left of a position
-  in a node"
-  [position node]
-  (loop [pos position, branch (-> node node-zip z/down), acc 0]
-    (let [{:keys [sub-counter element]} (z/node branch)
-          acc* (if element (inc acc) acc)]
-      (if (= pos 0)
-        acc*
-        (recur (dec pos)
-               (z/right branch)
-               (+ sub-counter acc*))))))
+(declare left-to-right)
 
 (defn index-of
   "returns the zero-based index of a limb in a node"
@@ -147,6 +82,90 @@
                  (nth children index)
                  (first (:children limb))))))))
 
+(declare crawl-to crawl-out)
+
+(defn fetch [node index]
+  "takes a node and an index and returns a recreation of the node at that index
+  as a limb"
+  (-> node
+      (crawl-to index)
+      (crawl-out)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Helpers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn count-elements
+  [{:keys [sub-counter element]}]
+  (if element
+    (inc sub-counter)
+    sub-counter))
+
+(defn count-children
+  [children]
+  (reduce + (map count-elements children)))
+
+(defn filled-node
+  [{:keys [children element] :as node}]
+  (or element (not-empty children)))
+
+(defn make-node
+  [{:keys [triple element]} children]
+  (let [children (filter filled-node children)
+        sub-counter (count-children children)]
+    (->Node triple
+            element
+            sub-counter
+            (sorted :triple children))))
+
+(defn nth-child
+  "Returns the loc of the nth child of the node at this loc, or
+  nil if no children or nth-child"
+  [loc n]
+  (when (z/branch? loc)
+    (let [[node path] loc
+          cs (z/children loc)
+          c (nth cs n nil)]
+      (when (and cs c)
+        (with-meta
+          [c {:l (if (> n 0) (vec (take n cs)) [])
+              :pnodes (if path (conj (:pnodes path) node) [node])
+              :ppath path
+              :r (drop (+ n 1) cs)}]
+          (meta loc))))))
+
+(defn replace-node
+  [[head & tail] node-loc limb]
+  (let [node-child (nth-child node-loc head)]
+    (if (empty? tail)
+      (if (-> node-child z/node :element)
+        (-> node-loc z/root)
+        (-> node-child
+            (z/edit assoc :element (:element limb))
+            z/root))
+      (recur tail node-child (first (:children limb))))))
+
+(defn merge-node
+  [[head & tail] node-loc limb]
+  (if-not head
+    (-> node-loc (z/append-child limb) z/root)
+    (recur tail
+           (nth-child node-loc head)
+           (first (:children limb)))))
+
+(defn left-to-right
+  "a strategy that returns the sum of the branches to the left of a position
+  in a node"
+  [position node]
+  (loop [pos position, branch (-> node node-zip z/down), acc 0]
+    (let [{:keys [sub-counter element]} (z/node branch)
+          acc* (if element (inc acc) acc)]
+      (if (= pos 0)
+        acc*
+        (recur (dec pos)
+               (z/right branch)
+               (+ sub-counter acc*))))))
+
 (defn crawl-to
   "returns a zipper with it's location where the index in a node"
   [node index]
@@ -173,10 +192,4 @@
         (recur (z/up zip) child)
         build))))
 
-(defn fetch [node index]
-  "takes a node and an index and returns a recreation of the node at that index
-  as a limb"
-  (-> node
-      (crawl-to index)
-      (crawl-out)))
 
