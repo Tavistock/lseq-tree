@@ -79,7 +79,7 @@
       (is (= (fetch root 2) c))
       (is (= (fetch root 3) d)))))
 
-#_(deftest test-del
+(deftest test-del
     (testing "should delete a node of a siple tree"
       (let [a (node [] "a")
             b (node [(triple 1 1 1)] "b")
@@ -97,7 +97,7 @@
             del-fchild (first (:children del-root))]
         (is (= (index-of root c) 1))
         (is (= (index-of root b) 2))
-        (is (= (index-of del-root b) 1))
+        (is (= (index-of del-root c) 1))
         (is (= (:element del-fchild) "c"))
         (is (= (count (:children del-fchild)) 0))))
     (testing "should not delete intermediate nodes in complex tree"

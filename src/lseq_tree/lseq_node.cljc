@@ -17,17 +17,22 @@
   [children]
   (reduce + (map count-elements children)))
 
+(defn filled-node
+  [{:keys [children element] :as node}]
+  (or element (not-empty children)))
+
+(defn make-node
+  [{:keys [triple element]} children]
+  (let [children (filter filled-node children)
+        sub-counter (count-children children)]
+    (->Node triple
+            element
+            sub-counter
+            (sorted :triple children))))
+
 (defn node-zip
   [root]
-  (z/zipper
-    (fn [node] (:children node))
-    (fn [node] (seq (:children node)))
-    (fn [{:keys [triple element]} children]
-      (->Node triple
-              element
-              (count-children children)
-              (sorted :triple children)))
-    root))
+  (z/zipper :children (comp seq :children) make-node root))
 
 (defn node
   [[triple & xs] element]
@@ -36,16 +41,6 @@
     (Node. triple nil 1 [(node xs element)])))
 
 (declare add del fetch index-of indexes)
-
-(defn merge-child
-  "takes children and merges a limb into it..."
-  [children limb]
-  (->> children (cons limb) (sorted :triple) (into [])))
-
-(defn triple-in
-  "finds the triple in a node and returns it's index"
-  [{:keys [children] :as node} triple]
-  (find-in (map :triple children) triple))
 
 (defn nth-child
   "Returns the loc of the nth child of the node at this loc, or
@@ -56,18 +51,15 @@
           cs (z/children loc)
           c (nth cs n nil)]
       (when (and cs c)
-        (with-meta [c
-                    {:l (if (> n 0) (vec (take n cs)) [])
-                     :pnodes (if path
-                               (conj (:pnodes path) node)
-                               [node])
-                     :ppath path
-                     :r (drop (+ n 1) cs)}]
-                   (meta loc))))))
+        (with-meta
+          [c {:l (if (> n 0) (vec (take n cs)) [])
+              :pnodes (if path (conj (:pnodes path) node) [node])
+              :ppath path
+              :r (drop (+ n 1) cs)}]
+          (meta loc))))))
 
 (defn add
   "adds a node with one child at each level(a limb) to the children of a node"
-  ; TODO use a indexes func on a limb instead of this
   [node limb]
   (let [paths (indexes node limb)]
     (if (last paths)
@@ -94,8 +86,17 @@
                  (first (:children limb))))))))
 
 (defn del
-  [this node]
-  this)
+  [node limb]
+  (let [paths (indexes node limb)]
+    (if (last paths)
+      (loop [[head & tail] paths
+             node-loc (nth-child (node-zip node) head)]
+        (if (empty? tail)
+          (-> node-loc
+              (z/edit assoc :element nil)
+              z/root)
+          (recur tail (nth-child node-loc head))))
+      node)))
 
 (defn left-to-right
   "a strategy that returns the sum of the branches to the left of a position
