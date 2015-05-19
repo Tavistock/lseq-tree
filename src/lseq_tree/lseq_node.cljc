@@ -114,8 +114,7 @@
   "returns the zero-based index of a limb in a node"
   [node limb]
   (let [paths (indexes node limb)]
-    (if (some nil? paths)
-      nil
+    (if (last paths)
       (loop [[head & tail] paths,
              {:keys [children] :as node} node,
              acc (if (:element node) 1 0)]
@@ -123,7 +122,8 @@
           (recur tail
                  (nth children head)
                  (+ acc (left-to-right head node)))
-          (dec acc)))))) ;zero-based index
+          (dec acc)))
+      nil))) ;zero-based index
 
 (defn indexes
   "returns a vector of numbers for each level that the index of a limb is
