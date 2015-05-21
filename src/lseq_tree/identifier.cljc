@@ -62,3 +62,36 @@
                               (nth counter level)))
                 (inc level))
          (node triples nil))))))
+
+(def secondary-values
+  (juxt :site :counter))
+
+(defn compare
+  ([id other] (compare id other (base)))
+  ([id other base]
+  (let [id-length        (count (:counter id))
+        other-length     (count (:counter other))
+        min-length       (min id-length other-length)
+        id-bit-length    (sum base (dec id-length))
+        other-bit-length (sum base (dec other-length))]
+  (loop [level 0]
+    (if (>= level min-length)
+      (- id-length other-length)
+      (let [sum-bit (sum base level)
+          id-primary (bit-shift-right
+                       (:digit id)
+                       (- id-bit-length sum-bit))
+          other-primary (bit-shift-right
+                          (:digit other)
+                          (- other-bit-length sum-bit))
+          id-2nd    (nth (:site id) level)
+          other-2nd (nth (:site other) level)
+          id-3rd    (nth (:counter id) level)
+          other-3rd (nth (:counter other) level)]
+        (if-not (= id-primary other-primary)
+          (- id-primary other-primary)
+          (if-not (= id-2nd other-2nd)
+            (- id-2nd other-2nd)
+            (if-not (= id-3rd other-3rd)
+              (- id-3rd other-3rd)
+              (recur (inc level)))))))))))
