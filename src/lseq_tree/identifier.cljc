@@ -27,19 +27,17 @@
    (let [length (depth node)]
      (loop [{:keys [children]
              {:keys [path site counter]} :triple} node
-            id-digit 0
-            id-site []
-            id-counter []
+            id-digit 0, id-site [], id-counter []
             level 0]
        (if (< level length)
-         (let [next-digit (+ id-digit path)]
+         (let [next-digit (+ id-digit path)
+               digit (if-not (= level (dec length))
+                       (bit-shift-left
+                         next-digit
+                         (bit base (inc level)))
+                       next-digit)]
            (recur (first children)
-                  (if-not (= level (dec length))
-                    (bit-shift-left next-digit
-                                    (bit base (inc level)))
-                    next-digit)
-                  (conj id-site site)
-                  (conj id-counter counter)
+                  digit (conj id-site site) (conj id-counter counter)
                   (inc level)))
          (id id-digit id-site id-counter))))))
 
