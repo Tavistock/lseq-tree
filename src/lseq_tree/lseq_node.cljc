@@ -106,6 +106,7 @@
   (reduce + (map count-elements children)))
 
 (defn filled-node
+  "a predicate that tells if a given node is filled (true) or empty (nil)"
   [{:keys [children element] :as node}]
   (or element (not-empty children)))
 
@@ -154,8 +155,8 @@
            (first (:children limb)))))
 
 (defn left-to-right
-  "a strategy that returns the sum of the branches to the left of a position
-  in a node"
+  "a strategy for finding the index of a node in dense space that returns
+  the sum of the branches to the left of a position in a node"
   [position node]
   (loop [pos position, branch (-> node node-zip z/down), acc 0]
     (let [{:keys [sub-counter element]} (z/node branch)
@@ -167,7 +168,7 @@
                (+ sub-counter acc*))))))
 
 (defn crawl-to
-  "returns a zipper with it's location where the index in a node"
+  "returns a zipper with it's location at the index in a node"
   [node index]
   (loop [zip (node-zip node)
          to-go index]
@@ -179,8 +180,8 @@
           (recur (z/next zip) (if elem (dec to-go) to-go)))))))
 
 (defn crawl-out
-  "this crawls up making from child node in a zipper making a replica of the
-  nodes it sees"
+  "crawls up from the given leaf in child node (as a zipper location) making
+  a replica of the nodes it sees"
   [child]
   (loop [zip child
          build nil]
