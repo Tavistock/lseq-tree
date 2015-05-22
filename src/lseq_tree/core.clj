@@ -3,6 +3,7 @@
             [lseq-tree.triple :as t :refer [triple]]
             [lseq-tree.base :as b]
             [lseq-tree.identifier :as i]
+            [lseq-tree.strategy :as s]
             [clojure.zip :as z]))
 
 (def start (node [] nil))
