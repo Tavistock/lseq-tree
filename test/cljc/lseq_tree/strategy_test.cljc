@@ -12,11 +12,12 @@
     (doall
       (for [x (range 100)]
         (let [b+1 (b+digit
-                    10
-                    (n/node  [(t/triple 2 3 4)
+                    {:boundary 10}
+                    [(n/node  [(t/triple 2 3 4)
                               (t/triple 5 6 7)
-                              (t/triple 1 2 2)] nil) ; digit = 1185
-                    2 (b/base))]
+                              (t/triple 1 2 2)] nil) nil] ; digit = 1185
+                    {:interval 10 :level 2}
+                    (b/base))]
           (is (> b+1 1185))
           (is (< b+1 1196)))))))
 

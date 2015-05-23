@@ -31,29 +31,25 @@
   ([limb level] (nth-id limb level (base)))
   ([limb level base]
    (loop [depth 0 limb limb acc 0]
-       (if (<= depth level)
-         (let [temp-acc (if-let [value (:path (:triple limb))]
-                          (+ acc value) acc)
-               next-acc (if (>= depth level)
-                          temp-acc
-                          (bit-shift-left
-                            temp-acc (bit base (inc depth))))]
-           (recur (inc depth) (first (:children limb)) next-acc))
-         (int acc)))))
+     (if (<= depth level)
+       (let [temp-acc (if-let [value (:path (:triple limb))]
+                        (+ acc value) acc)
+             next-acc (if (>= depth level)
+                        temp-acc
+                        (bit-shift-left
+                          temp-acc (bit base (inc depth))))]
+         (recur (inc depth) (first (:children limb)) next-acc))
+       (int acc)))))
 
 (declare candidate->id)
 
 (defn b+digit
-  [step prev-node level base]
-     (int (+ (nth-id prev-node level base)
-             (floor (inc (* (rand) step))))))
-
-(defn b+impl
   "takes a strategy, a node-pair, a extra, and a base.
   returns a digit"
   [{:keys [boundary]} [lower _] {:keys [interval level]} base]
-   (let [min-step (min boundary interval)]
-     (b+digit min-step lower level base)))
+  (let [min-step (min boundary interval)]
+    (int (+ (nth-id lower level base)
+            (floor (inc (* (rand) min-step)))))))
 
 (defn b+
   "returns a digit"
@@ -62,14 +58,19 @@
    {:keys [site counter]}
    base]
   (let [extra (extra-data pair base)
-        digit (b+impl strategy pair extra base)]
-  (candidate->id (id digit site counter)
-                 pair extra base)))
+        digit (b+digit strategy pair extra base)]
+    (candidate->id (id digit site counter)
+                   pair extra base)))
 
 (defn b-digit
   []
   nil)
 
+(defn digit->path
+  [digit level depth base]
+  (int (mod (bit-shift-right
+              digit (- (sum base level) (sum base depth)))
+            (pow 2 (bit base depth)))))
 
 (defn candidate->id
   "id, pair, extra-data, and base"
@@ -77,35 +78,21 @@
     [lower upper]
     {:keys [level]}
     base]
-   (let [sum-bit (sum base level)]
-     (loop [sites []
-            counters []
-            {{prev-path :path
-              prev-site :site
-              prev-counter :counter} :triple
-             prev-children :children} lower
-            {{next-path :path
-              next-site :site
-              next-counter :counter} :triple
-             next-children :children} upper
-            depth 0]
-       (if (<= depth level)
-         (let [path
-               (int (mod (bit-shift-right
-                           digit (- sum-bit (sum base depth)))
-                         (pow 2 (bit base depth))))
-               [next-sites next-counters]
-               (cond
-                 (= path next-path) [(conj sites next-site)
-                                     (conj counters next-counter)]
-                 (= path prev-path) [(conj sites prev-site)
-                                     (conj counters prev-counter)]
-                 :default [sites counters])]
-           (recur next-sites
-                  next-counters
-                  (first prev-children)
-                  (first next-children)
-                  (inc depth)))
-         (id digit
-             (conj sites site)
-             (conj counters counter)))))))
+   (loop [sites [], counters []
+          {{low-p :path low-s :site low-c :counter} :triple} lower
+          {{up-p :path up-s :site up-c :counter} :triple} upper
+          depth 0]
+     (if (<= depth level)
+       (let [path (digit->path digit level depth base)
+             [next-s next-c]
+             (cond
+               (= path up-p) [(conj sites up-s)
+                              (conj counters up-c)]
+               (= path low-p) [(conj sites low-s)
+                               (conj counters low-c)]
+               :default [sites counters])]
+         (recur next-s, next-c
+                (-> lower :children first)
+                (-> upper :children first)
+                (inc depth)))
+       (id digit (conj sites site) (conj counters counter))))))
