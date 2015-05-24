@@ -17,38 +17,26 @@
     (- (/ (* x (+ x 1)) 2)
        (/ (* y (+ y 1)) 2))))
 
-(def node-val
-  (comp :path :triple))
-
-(def fchild
-  (comp first :children))
-
 (defn interval
-  [base prev-node next-node level]
-  (loop [prev prev-node, post next-node
-         i 0, acc 0, common-root true, prev-greater false]
-    (if (> i level) acc
-      (let [prev-val (or (node-val prev) 0)
-            proposed-val (or (node-val post) 0)
-            diverge? (and common-root
-                          (not (== prev-val proposed-val)))
+  [base lower upper level]
+  (loop [lower lower, upper upper
+         depth 0, acc 0, common-root true, low-greater false]
+    (if (> depth level)
+      acc
+      (let [low-val (or (-> lower :triple :path) 0)
+            up-val (or (-> upper :triple :path) 0)
+            diverge? (and common-root (not (== low-val up-val)))
             common-root (if diverge? false common-root)
-            prev-greater (if diverge?
-                           (> prev-val proposed-val)
-                           prev-greater)
-            post-val (if prev-greater
-                       (- (pow 2 (bit base i)) 1)
-                       proposed-val)
-            acc (if (or common-root
-                        prev-greater
-                        (not= i level))
-                  (+ acc (- post-val prev-val))
-                  (+ acc (- post-val prev-val 1)))
-            acc (if (not= i level)
-                  (* acc (pow 2 (bit base (+ i 1))))
-                  acc)]
-        (recur (fchild prev), (fchild post)
-               (inc i) acc, common-root, prev-greater)))))
+            low-greater (if diverge? (> low-val up-val) low-greater)
+            up-val (if low-greater (- (pow 2 (bit base depth)) 1) up-val)
+            acc1  (+ acc (- up-val low-val (if (or common-root
+                                                     low-greater
+                                                     (not= depth level)) 0 1)))
+            acc2 (if (not= depth level)
+                   (* acc1 (pow 2 (bit base (+ depth 1))))
+                   acc1)]
+        (recur (-> lower :children first), (-> upper :children first)
+               (inc depth) acc2, common-root, low-greater)))))
 
 (defn base
   ([] (base 3))

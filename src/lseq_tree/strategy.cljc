@@ -53,15 +53,37 @@
 
 (defn b+
   "returns a digit"
-  [strategy [lower upper :as pair] {:keys [site counter] :as id}
-   base]
+  [strategy pair {:keys [site counter] :as id} base]
   (let [extra (extra-data pair base)
         digit (b+digit strategy pair extra base)]
     (candidate->id (id digit site counter) pair extra base)))
 
 (defn b-digit
-  [strategy pair extra base]
-  )
+  [{:keys [boundary]} [lower upper] {:keys [interval level]} base]
+  (loop [lower lower, upper upper
+         depth 0, acc 0, common-root true, low-greater false]
+    (if (> depth level)
+      (let [min-step (min boundary interval)]
+      (int (- acc (- (floor (* (rand) min-step)) (if low-greater 0 1)))))
+      (let [low-val (or (-> lower :triple :path) 0)
+            up-val (or (-> upper :triple :path) 0)
+            diverge? (and common-root (not (== low-val up-val)))
+            common-root (if diverge? false common-root)
+            low-greater (if diverge? (> low-val up-val) low-greater)
+            next-val (if low-greater (int (dec (pow 2 (bit base depth)))) up-val)
+            acc1 (+ acc next-val)
+            acc2 (if-not (= depth level)
+                   (bit-shift-left acc1 (bit base (inc depth)))
+                   acc1)]
+        (recur (-> lower :children first), (-> upper :children first)
+               (inc depth) acc2, common-root, low-greater)))))
+
+
+(defn b-
+  [strategy pair {:keys [site counter]} base]
+  (let [extra (extra-data pair base)
+        digit (b-digit strategy pair extra base)]
+    (candidate->id (id digit site counter) pair extra base)))
 
 (defn digit->path
   [digit level depth base]
