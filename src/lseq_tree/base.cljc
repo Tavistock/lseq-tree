@@ -28,10 +28,10 @@
             diverge? (and common-root (not (== low-val up-val)))
             common-root (if diverge? false common-root)
             low-greater (if diverge? (> low-val up-val) low-greater)
-            up-val (if low-greater (- (pow 2 (bit base depth)) 1) up-val)
-            acc1  (+ acc (- up-val low-val (if (or common-root
-                                                     low-greater
-                                                     (not= depth level)) 0 1)))
+            up-val1 (if low-greater (dec (pow 2 (bit base depth))) up-val)
+            acc1  (+ acc (- up-val1 low-val (if (or common-root
+                                                    low-greater
+                                                    (not= depth level)) 0 1)))
             acc2 (if (not= depth level)
                    (* acc1 (pow 2 (bit base (+ depth 1))))
                    acc1)]
