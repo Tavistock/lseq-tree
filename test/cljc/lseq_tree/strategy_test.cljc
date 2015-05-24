@@ -11,13 +11,11 @@
   (testing "within limits"
     (doall
       (for [x (range 100)]
-        (let [b+1 (b+digit
-                    {:boundary 10}
-                    [(n/node  [(t/triple 2 3 4)
+        (let [pair [(n/node  [(t/triple 2 3 4) ; digit @2 = 1185
                               (t/triple 5 6 7)
-                              (t/triple 1 2 2)] nil) nil] ; digit = 1185
-                    {:interval 10 :level 2}
-                    (b/base))]
+                              (t/triple 1 2 2)] nil) nil]
+              b+1 (b+digit {:boundary 10} pair
+                    {:interval 10 :level 2} (b/base))]
           (is (> b+1 1185))
           (is (< b+1 1196)))))))
 

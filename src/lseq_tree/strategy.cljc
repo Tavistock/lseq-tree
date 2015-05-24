@@ -53,18 +53,15 @@
 
 (defn b+
   "returns a digit"
-  [strategy
-   [lower upper :as pair]
-   {:keys [site counter]}
+  [strategy [lower upper :as pair] {:keys [site counter] :as id}
    base]
   (let [extra (extra-data pair base)
         digit (b+digit strategy pair extra base)]
-    (candidate->id (id digit site counter)
-                   pair extra base)))
+    (candidate->id (id digit site counter) pair extra base)))
 
 (defn b-digit
-  []
-  nil)
+  [strategy pair extra base]
+  )
 
 (defn digit->path
   [digit level depth base]
