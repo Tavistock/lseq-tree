@@ -48,8 +48,9 @@
             (pow 2 (bit base level)))))
 
 (defn id->node
-  ([id] (id->node id (base)))
-  ([{:keys [digit site counter] :as id} base]
+  ([id] (id->node id nil (base)))
+  ([id element] (id->node id element (base)))
+  ([{:keys [digit site counter] :as id} element base]
    (let [length (count counter)
          bit-length (sum base (- length 1))]
      (loop [triples []
@@ -61,7 +62,7 @@
                               (nth site level)
                               (nth counter level)))
                 (inc level))
-         (node triples nil))))))
+         (node triples element))))))
 
 (def secondary-values
   (juxt :site :counter))

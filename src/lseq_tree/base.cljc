@@ -1,8 +1,5 @@
-(ns lseq-tree.base)
-
-(defn pow
-  [n x]
-  (Math/pow n x))
+(ns lseq-tree.base
+  (:require [lseq-tree.util :refer [pow]]))
 
 (defrecord Base [size])
 
@@ -37,6 +34,10 @@
                    acc1)]
         (recur (-> lower :children first), (-> upper :children first)
                (inc depth) acc2, common-root, low-greater)))))
+
+(defn depth-max
+  [base n]
+  (int (dec (pow 2 (bit base n)))))
 
 (defn base
   ([] (base 3))

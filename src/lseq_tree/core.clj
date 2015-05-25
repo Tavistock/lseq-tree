@@ -4,7 +4,8 @@
             [lseq-tree.base :as b]
             [lseq-tree.identifier :as i]
             [lseq-tree.strategy :as s]
-            [clojure.zip :as z]))
+            [clojure.zip :as z]
+            [lseq-tree.lseq-tree :as tree]))
 
 (def start (node [] nil))
 (def a (node [(triple 1 1 1)] "a"))
@@ -20,3 +21,16 @@
   "I don't do a whole lot."
   [x]
   (println x "Hello, World!"))
+
+(def z
+  (loop  [nn 0
+          tree1 (tree/lseq 42)]
+    (if  (= nn 100)
+      tree1
+      (let [rando (int (rand nn))
+            tree2 (try
+                    (first (tree/insert tree1 nn rando))
+                     (catch Exception e (do
+                                          (prn e)
+                                          tree1)))]
+        (recur (inc nn) tree2)))))
