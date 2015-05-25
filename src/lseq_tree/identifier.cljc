@@ -2,12 +2,8 @@
   (:refer-clojure :exclude  [compare])
   (:require [lseq-tree.base :refer [base bit sum]]
             [lseq-tree.lseq-node :refer [node]]
-            [lseq-tree.triple :refer [triple]]))
-
-;; TODO abstract the math away so it is js and java compliant
-
-(defn pow [n x]
-  (Math/pow n x))
+            [lseq-tree.triple :refer [triple]]
+            [lseq-tree.util :refer [pow]]))
 
 (defrecord ID [digit site counter])
 
@@ -22,8 +18,7 @@
      (recur (first (:children node)) (inc acc)))))
 
 (defn node->id
-  ([node] (node->id node (base)))
-  ([node base]
+  [node base]
    (let [length (depth node)]
      (loop [{:keys [children]
              {:keys [path site counter]} :triple} node
@@ -39,7 +34,7 @@
            (recur (first children)
                   digit (conj id-site site) (conj id-counter counter)
                   (inc level)))
-         (id id-digit id-site id-counter))))))
+         (id id-digit id-site id-counter)))))
 
 (defn digit->path
   [digit base level bit-length]
@@ -48,8 +43,7 @@
             (pow 2 (bit base level)))))
 
 (defn id->node
-  ([id] (id->node id nil (base)))
-  ([id element] (id->node id element (base)))
+  [id element] (id->node id element (base)))
   ([{:keys [digit site counter] :as id} element base]
    (let [length (count counter)
          bit-length (sum base (- length 1))]
@@ -62,14 +56,10 @@
                               (nth site level)
                               (nth counter level)))
                 (inc level))
-         (node triples element))))))
-
-(def secondary-values
-  (juxt :site :counter))
+         (node triples element)))))
 
 (defn compare
-  ([id other] (compare id other (base)))
-  ([id other base]
+  [id other base]
   (let [id-length        (count (:counter id))
         other-length     (count (:counter other))
         min-length       (min id-length other-length)
@@ -95,4 +85,4 @@
             (- id-2nd other-2nd)
             (if-not (= id-3rd other-3rd)
               (- id-3rd other-3rd)
-              (recur (inc level)))))))))))
+              (recur (inc level))))))))))
