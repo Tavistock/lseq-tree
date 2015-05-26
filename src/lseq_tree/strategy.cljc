@@ -9,6 +9,45 @@
   ([] (->Strategy 10))
   ([boundary] (->Strategy boundary)))
 
+(defn paths
+  [limb]
+  (loop [xs [] {{path :path} :triple more :children} limb]
+    (if path
+      (recur (conj xs path) (first more))
+      xs)))
+
+(defn max-paths [path base]
+  (map-indexed
+    (fn [index value]
+      [(inc index) (if (= :max value)
+                     (b/depth-max base index)
+                     value)])
+    path))
+
+(defn paths->digit
+  [path base]
+  (let [level (count path)
+        reducer (fn [acc [index value]]
+                  (if (= level index)
+                    (+ acc value)
+                    (bit-shift-left
+                      (+ acc value) (b/bit base index))))]
+    (reduce reducer 0
+            (map-indexed max-paths path))))
+
+(defn prefix
+  [limb depth base]
+  (let [paths (paths limb)
+        prefixs (take (inc depth) (lazy-cat paths (repeat 0)))]
+    (paths->digit prefixs base)))
+
+(declare upper-path)
+
+(defn postfix
+  [pair depth base]
+  (paths->digit (upper-path pair depth) base))
+
+;;;; GRAVEYARD
 (defrecord ExtraData [interval level])
 
 (defn extra-data
@@ -39,9 +78,11 @@
   "takes a strategy, a node-pair, a extra, and a base.
   returns a digit"
   [{:keys [boundary]} [lower _] {:keys [interval level]} base]
-  (let [min-step (min boundary interval)]
-    (long (+' (nth-id lower level base)
-            (floor (inc (* (rand) min-step)))))))
+  (let [min-step (min boundary interval)
+        lower-bound (nth-id lower level base)
+        rand-step (do (prn lower level base)
+                      (long (floor (inc (* (rand) min-step)))))]
+    (+' lower-bound rand-step)))
 
 (defn b+
   "returns a digit"
@@ -49,36 +90,47 @@
   (let [digit (b+digit strategy pair extra base)]
     (candidate->id (i/id digit site counter) pair extra base)))
 
+
+(defn upper-bound [path base]
+  (let [level (count path)]
+    (letfn [(path-reducer [acc [ind value]]
+              (if (= level ind)
+                (+ acc value)
+                (bit-shift-left (+ acc value) (b/bit base ind))))]
+    (reduce path-reducer 0 (max-path path base)))))
+
+(defn upper-path
+  "takes a pair of nodes and returns the upper path with max
+  eg for nodes with paths [2 5 1] and [2 5] it returns [2 5 :max]"
+  [pair level]
+  (loop [xs []
+         [lower upper :as both] pair
+         depth 0]
+    (let [upper-p (:path (:triple upper))
+          lower-p (:path (:triple lower))]
+      (if-not (= upper-p lower-p)
+          (if (nil? upper-p)
+            (into xs (repeat (i/depth lower) :max))
+            (conj xs (dec upper-p)))
+        (if (= depth level)
+          (conj xs (dec lower-p))
+          (recur (conj xs upper-p)
+                 (map #(first (:children %)) both)
+                 (inc depth)))))))
+
 (defn b-digit
-  [{:keys [boundary]} [lower upper] {:keys [interval level]} base]
-  (loop [lower lower, upper upper
-         depth 0, acc 0, common-root true, low-greater false]
-    (if (> depth level)
-      (let [min-step (min boundary interval)]
-      (long (- acc (- (floor (* (rand) min-step)) (if low-greater 0 1)))))
-      (let [low-val (or (-> lower :triple :path) 0)
-            up-val (or (-> upper :triple :path) 0)
-            diverge? (and common-root (not (== low-val up-val)))
-            common-root (if diverge? false common-root)
-            low-greater (if diverge? (> low-val up-val) low-greater)
-            next-val (if low-greater (b/depth-max base depth) up-val)
-            acc1 (+ acc next-val)
-            acc2 (if-not (= depth level)
-                   (bit-shift-left acc1 (b/bit base (inc depth)))
-                   acc1)]
-        (recur (-> lower :children first), (-> upper :children first)
-               (inc depth) acc2, common-root, low-greater)))))
+  [{:keys [boundary]}
+   pair
+   {:keys [interval level]}
+   base]
+  (let [upper-xs (upper-path pair level)
+        upper-limit (upper-bound upper-xs base)]
+    upper-limit))
 
 (defn b-
   [strategy pair {:keys [site counter]} extra base]
   (let [digit (b-digit strategy pair extra base)]
     (candidate->id (i/id digit site counter) pair extra base)))
-
-(defn digit->path
-  [digit level depth base]
-  (long (mod (bit-shift-right
-              digit (- (b/sum base level) (b/sum base depth)))
-            (pow 2 (b/bit base depth)))))
 
 (defn candidate->id
   "id, pair, extra-data, and base"
@@ -91,7 +143,7 @@
           {{up-p :path up-s :site up-c :counter} :triple} upper
           depth 0]
      (if (<= depth level)
-       (let [path (digit->path digit level depth base)
+       (let [path (i/digit->path digit base depth level)
              [next-s next-c]
              (cond
                (= path up-p) [(conj sites up-s)

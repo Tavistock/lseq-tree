@@ -37,22 +37,23 @@
          (id id-digit id-site id-counter)))))
 
 (defn digit->path
-  [digit base level bit-length]
-  (int (mod (bit-shift-right digit
-                             (- bit-length (sum base level)))
+  [digit base level total-levels]
+  (int (mod (bit-shift-right
+              digit
+              (- (sum base total-levels)
+                 (sum base level)))
             (pow 2 (bit base level)))))
 
 (defn id->node
-  [id element] (id->node id element (base)))
-  ([{:keys [digit site counter] :as id} element base]
+  [{:keys [digit site counter] :as id} element base]
    (let [length (count counter)
-         bit-length (sum base (- length 1))]
+         total-levels (- length 1)]
      (loop [triples []
             level 0]
        (if (< level length)
          (recur (conj triples
                       (triple (digit->path
-                                digit base level bit-length)
+                                digit base level total-levels)
                               (nth site level)
                               (nth counter level)))
                 (inc level))

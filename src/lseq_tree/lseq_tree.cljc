@@ -62,7 +62,18 @@
   [{:keys [strategy site counter base]} pair]
   (let [{:keys [level] :as extra} (s/extra-data pair base)
         partial-id (i/id nil site counter)]
-    (if (= (level-hash level) 0)
+    (do (prn extra)
+     (if true
+     ; (= (level-hash level) 0)
+      (s/b+ strategy pair partial-id extra base)
+      (s/b- strategy pair partial-id extra base)))))
+
+(defn debug-alloc
+  [{:keys [strategy site counter base] :as tree} n sign]
+  (let [pair [(fetch tree n) (fetch tree (inc n))]
+        {:keys [level] :as extra} (s/extra-data pair base)
+        partial-id (i/id nil site counter)]
+    (if (= :+ sign)
       (s/b+ strategy pair partial-id extra base)
       (s/b- strategy pair partial-id extra base))))
 

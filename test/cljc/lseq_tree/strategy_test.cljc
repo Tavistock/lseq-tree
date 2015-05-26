@@ -19,6 +19,34 @@
           (is (> b+1 1185))
           (is (< b+1 1196)))))))
 
+(deftest bounds-test
+  (testing "does upper-paths work"
+    (let [node-lower (n/node [(t/triple 2 1 1)
+                           (t/triple 5 1 1)
+                           (t/triple 1 1 1)] nil)
+          path1 (upper-path
+                 [node-lower
+                  (n/node  [(t/triple 2 1 1)
+                            (t/triple 5 1 1)] nil)])
+          path2 (upper-path
+                  [node-lower
+                   (n/node [(t/triple 2 1 1)
+                            (t/triple 5 1 1)
+                            (t/triple 5 1 1)] nil)])
+          path3 (upper-path
+                  [node-lower
+                   (n/node [(t/triple 2 1 1)] nil)])]
+      (is (= [2 5 :max] path1))
+      (is (= [2 5 4] path2))
+      (is (= [2 :max :max] path3))))
+  (testing "does it expand paths correctly"
+    (let [bound1 (upper-bound [2 5 :max] (b/base 3))
+          bound2 (upper-bound [2 5 4] (b/base 3))
+          bound3 (upper-bound [2 :max :max] (b/base 3))]
+      (is (= bound1 1215))
+      (is (= bound2 1188))
+      (is (= bound3 1535)))))
+
 (deftest candidate->id-test
   (testing "traverses prev-node and adds its own site and counter"
     (let [id1 (candidate->id
