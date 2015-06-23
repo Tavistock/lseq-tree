@@ -193,4 +193,11 @@
         (recur (z/up zip) child)
         build))))
 
-
+(defn linearize
+  [nodes]
+  (loop [zip (node-zip nodes)
+         xs (list)]
+    (if (z/end? zip)
+      (reverse xs)
+      (recur (z/next zip)
+             (cons (:element (z/node zip)) xs)))))

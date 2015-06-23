@@ -5,7 +5,8 @@
     [lseq-tree.strategy :as s]
     [lseq-tree.triple :as t]
     [lseq-tree.lseq-node :as n]
-    [lseq-tree.util :refer [pow]]))
+    [lseq-tree.util :refer [pow]]
+    [clojure.zip :as z]))
 
 (def max-value
   #?(:clj Long/MAX_VALUE
@@ -47,7 +48,7 @@
   (let [lower (fetch tree index)
         upper (fetch tree (inc index))
         tree1 (update-in tree [:counter] inc)
-        id (alloc tree1 [lower upper])
+        id (alloc tree1 lower upper)
         tree2 (apply-insert tree1 element id)]
     [tree2 [element id]]))
 
@@ -59,23 +60,8 @@
     [tree1 id]))
 
 (defn alloc
-  [{:keys [strategy site counter base]} pair]
-  (let [{:keys [level] :as extra} (s/extra-data pair base)
-        partial-id (i/id nil site counter)]
-    (do (prn extra)
-     (if true
-     ; (= (level-hash level) 0)
-      (s/b+ strategy pair partial-id extra base)
-      (s/b- strategy pair partial-id extra base)))))
-
-(defn debug-alloc
-  [{:keys [strategy site counter base] :as tree} n sign]
-  (let [pair [(fetch tree n) (fetch tree (inc n))]
-        {:keys [level] :as extra} (s/extra-data pair base)
-        partial-id (i/id nil site counter)]
-    (if (= :+ sign)
-      (s/b+ strategy pair partial-id extra base)
-      (s/b- strategy pair partial-id extra base))))
+  [tree lower upper]
+  (s/tree-alloc tree lower upper))
 
 (defn apply-insert
   [{:keys [base] :as tree} element id]
@@ -86,3 +72,7 @@
   [{:keys [base] :as tree} id]
   (let [node (i/id->node id nil base)]
     (update-in tree [:root] #(n/del % node))))
+
+(defn linearize
+  [tree]
+  (n/linearize (:root tree)))
